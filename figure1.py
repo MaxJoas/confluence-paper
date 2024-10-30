@@ -21,17 +21,14 @@ def plot_metric_grid(data_dict, metric, outpath_base, share_y=True):
         outpath: Path to save the grid plot image.
     """
     # Define consistent colors using viridis colormap
-
     palette = sns.color_palette("viridis", 2)
     sns.set_style("darkgrid")
     plt.rcParams.update({"font.size": 22, "font.weight": "bold"})
     METHOD_COLORS = {"al": palette[1], "rand": palette[0]}
-
-    # Define consistent markers for methods
-
+    
     METHOD_MARKERS = {"al": "o", "rand": "x"}
     METRIC_FRIENDLY_NAME = {"iou": "Mean IoU", "dAbsAbsConf": "Mean Δ Confluence"}
-
+    
     EXPERIMENT_FRIENDLY_NAME = {
         "unet-lc-internal-al": "U-Net LC Internal",
         "d2-lc-internal-al": "D2 LC Internal",
@@ -50,74 +47,66 @@ def plot_metric_grid(data_dict, metric, outpath_base, share_y=True):
         "sam-lc-internallazy-al": "SAM LC Internal Lazy",
         "cp-lc-internallazy-al": "CP LC Internal Lazy",
     }
-    OUTPATH_FILE = os.path.join(outpath_base, f"01_figure_1_{metric}_sharedy_{share_y}")
+    OUTPATH_FILE = os.path.join(outpath_base, f"01_figure_1_{metric}_global_scale")
     P_VALUE_DICT = defaultdict(list)
-
+    
     model_dict = {}
     for key, df_list in data_dict.items():
         model_name = key.split("-")[0]
         if model_name not in model_dict:
             model_dict[model_name] = {}
         model_dict[model_name][key] = df_list
+    
     num_models = len(model_dict)
     num_datasets = max(len(datasets) for datasets in model_dict.values())
-
+    
     fig, axes = plt.subplots(
         num_models, num_datasets, figsize=(40, num_models * 7), constrained_layout=True
     )
-
+    
     if num_models == 1:
         axes = axes.reshape(1, -1)
-
-    # First pass: collect all y values and determine y-limits for each row
-    row_ylims = {}
-    for i, (model, datasets) in enumerate(model_dict.items()):
-        row_values = []
+    
+    # First pass: collect ALL values to determine global y-limits
+    all_values = []
+    for model, datasets in model_dict.items():
         for df_list in datasets.values():
             combined_df = pd.concat(df_list, ignore_index=True)
-            row_values.extend(combined_df[metric].values)
-        # Calculate row-specific y-limits with padding
-
-        y_min = min(row_values)
-        y_max = max(row_values)
-        y_range = y_max - y_min
-        padding = y_range * 0.08  # 15% padding for markers
-        row_ylims[i] = (y_min - padding * 0.5, y_max + padding)
+            all_values.extend(combined_df[metric].values)
+    
+    # Calculate global y-limits with padding
+    y_min = min(all_values)
+    y_max = max(all_values)
+    y_range = y_max - y_min
+    padding = y_range * 0.08  # 8% padding for markers
+    global_ylims = (y_min - padding * 0.5, y_max + padding)
+    
     # Second pass: create plots
-
     for i, (model, datasets) in enumerate(model_dict.items()):
-        # Get y-limits for this row
-        row_values = []
-        for df_list in datasets.values():
-            combined_df = pd.concat(df_list, ignore_index=True)
-            row_values.extend(combined_df[metric].values)
-        y_min = min(row_values)
-        y_max = max(row_values)
-
         for j, (key, df_list) in enumerate(datasets.items()):
             combined_df = pd.concat(df_list, ignore_index=True)
             steps = sorted(combined_df["step"].unique())
             ax = axes[i, j]
-            if share_y:
-                axes[i, j].set_ylim(y_min, y_max)
-                ax = axes[i, j]
-                ax.set_ylim(row_ylims[i])
+            
+            # Set the global y-limits for every subplot
+            ax.set_ylim(global_ylims)
+            
             for step in steps:
                 step_data = combined_df[combined_df["step"] == step]
-
+                
                 for k, method in enumerate(["al", "rand"]):
                     offset = k * 0.1
                     method_data = step_data[step_data["method"] == method]
-
+                    
                     mean = method_data[metric].mean()
                     std = method_data[metric].std()
                     q25 = np.percentile(method_data[metric], 25)
                     q75 = np.percentile(method_data[metric], 75)
-
+                    
                     # Calculate absolute distances from mean for lower and upper errors
                     lower_err = abs(mean - q25)  # Distance from mean to 25th percentile
                     upper_err = abs(q75 - mean)  # Distance from mean to 75th percentile
-
+                    
                     label = method.upper() if step == steps[0] else ""
                     ax.errorbar(
                         step + offset,
@@ -132,37 +121,21 @@ def plot_metric_grid(data_dict, metric, outpath_base, share_y=True):
                         label=label,
                     )
                     offset = 0.0
+                
                 # Statistical significance test
-
                 al_values = step_data[step_data["method"] == "al"][metric].values
                 rand_values = step_data[step_data["method"] == "rand"][metric].values
-
+                
                 if len(al_values) > 0 and len(rand_values) > 0:
                     _, p_value = stats.mannwhitneyu(
                         al_values, rand_values, alternative="two-sided"
                     )
                     P_VALUE_DICT[key].append(p_value)
-
+                    
                     if p_value < 0.05:
-                        # Plot the data first and let matplotlib set y-limits
-                        ax.draw_artist(
-                            ax.patch
-                        )  # Ensures limits are updated before getting ylim
-                        (
-                            y_min,
-                            y_max,
-                        ) = (
-                            ax.get_ylim()
-                        )  # Get the current y-axis limits for this subplot
-
-                        # Set marker_y slightly below the y-axis max
-
-                        marker_y = (
-                            y_max - (y_max - y_min) * 0.02
-                        )  # 2% below the top limit
-
-                        # Place the significance marker just below the y-axis max
-
+                        # Calculate marker_y position based on global y-limits
+                        marker_y = global_ylims[1] - (global_ylims[1] - global_ylims[0]) * 0.02
+                        
                         ax.text(
                             step,
                             marker_y,
@@ -173,31 +146,29 @@ def plot_metric_grid(data_dict, metric, outpath_base, share_y=True):
                             fontsize=25,
                             weight="bold",
                         )
-
-                ax.set_title(EXPERIMENT_FRIENDLY_NAME[key], fontweight="bold")
-                ax.set_ylabel(
-                    METRIC_FRIENDLY_NAME[metric], fontweight="bold"
-                )  # Y-axis label for every subplot
-                ax.set_xlabel("Step", fontweight="bold")
-
-                # Show legend in every subplot
-
-                ax.legend(title="Method", loc="upper right", fontsize=15)
+                
+            ax.set_title(EXPERIMENT_FRIENDLY_NAME[key], fontweight="bold")
+            ax.set_ylabel(
+                METRIC_FRIENDLY_NAME[metric], fontweight="bold"
+            )
+            ax.set_xlabel("Step", fontweight="bold")
+            ax.legend(title="Method", loc="upper right", fontsize=15)
+    
     # Hide any unused subplots
-
     for j in range(len(datasets), num_datasets):
         axes[i, j].set_visible(False)
-    # Save the plot if outpath is provided
-
+    
+    # Save the plot
     if outpath_base:
         plt.savefig(OUTPATH_FILE, bbox_inches="tight", dpi=500)
     plt.show()
     plt.close()
     print(f"Saved plot to {OUTPATH_FILE}")
-    # p_values to dataframe
+    
+    # Save p-values
     p_values_df = pd.DataFrame.from_dict(P_VALUE_DICT, orient="index").transpose()
     p_values_df.to_csv(OUTPATH_FILE.replace("png", "") + "_p_values.csv")
-
+    
     return fig, axes
 
 
