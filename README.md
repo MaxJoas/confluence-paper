@@ -5,6 +5,10 @@ We show how to obtain the in the paper shown results on three levels:
 2. LEVEL 2: How to get the plots and figures from the aggregation of the raw results
 3. LEVEL 3: How to aggregate the raw results
 
+4. flowchart LR
+    A["raw_data 📊"] --> |"preprocessing"| B["aggregated_data 📈"]
+    B --> |"analysis"| C["paper_data 📝"]
+
 # Requirements
 
 
