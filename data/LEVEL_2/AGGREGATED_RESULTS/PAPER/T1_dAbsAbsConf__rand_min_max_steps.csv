@@ -1,0 +1,17 @@
+key,model,dataset,min,max,best_step,best_rel_step
+unet-lc-internal-al,unet,lc-internal-al,0.05,0.24,13.0,1.0
+d2-lc-internal-al,d2,lc-internal-al,0.13,0.15,10.0,0.77
+sam-lc-internal-al,sam,lc-internal-al,0.04,0.08,7.0,0.54
+cp-lc-internal-al,cp,lc-internal-al,0.02,0.09,4.0,0.31
+unet-lc-external-al,unet,lc-external-al,0.12,0.33,330.0,1.0
+d2-lc-external-al,d2,lc-external-al,0.34,0.37,330.0,1.0
+sam-lc-external-al,sam,lc-external-al,0.11,0.56,10.0,0.03
+cp-lc-external-al,cp,lc-external-al,0.21,0.47,80.0,0.24
+unet-sc-al,unet,sc-al,0.06,0.15,5.0,0.56
+d2-sc-al,d2,sc-al,0.08,0.09,6.0,0.67
+sam-sc-al,sam,sc-al,0.04,0.12,2.0,0.22
+cp-sc-al,cp,sc-al,0.05,0.09,3.0,0.33
+unet-lc-internallazy-al,unet,lc-internallazy-al,0.07,0.4,13.0,1.0
+d2-lc-internallazy-al,d2,lc-internallazy-al,0.08,0.19,8.0,0.62
+sam-lc-internallazy-al,sam,lc-internallazy-al,0.05,0.19,10.0,0.77
+cp-lc-internallazy-al,cp,lc-internallazy-al,0.04,0.1,4.0,0.31

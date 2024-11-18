@@ -1,0 +1,5 @@
+model,key,dataset,min,max,best_step,best_rel_step
+cp,cp-lc-external-al,lc-external-al,0.11,0.21,0.0,0.0
+d2,d2-lc-external-al,lc-external-al,0.17,0.19,8.0,0.77
+sam,sam-lc-external-al,lc-external-al,0.02,0.18,0.0,0.0
+unet,unet-lc-external-al,lc-external-al,0.21,0.29,9.0,0.85
