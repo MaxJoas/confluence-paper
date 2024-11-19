@@ -5,13 +5,27 @@ We show how to obtain the in the paper shown results on three levels:
 2. LEVEL 2: How to get the plots and figures from the aggregation of the raw results
 3. LEVEL 3: How to aggregate the raw results
 
-# Requirements
+## Requirements
+- pip
+- python
 
+## Installation
+Install the requirements from the `requirements.txt` file in the environment of your choice for example:
+```
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
+## Get figures and tables from LEVEL 1 (recommended)
+```mermaid
+graph LR
+    raw_data["Raw Data / LEVEL 3"] -->|analyse_res.py/ana_normal.py| aggregated_data["Aggregated Data / LEVEL 2"]
+    aggregated_data -->|all_figures.py| paperdata["Paper Data / LEVEL 1"]
 
-# Getting started with Level 1
-We pre-prepared the data to generate the plots and made it available with this repo.
-To generate the figures as shown in the paper and supplement run:
+```
+
+We've already uploaded the fully prepared and aggregated data to this very repo. So the easiest way to get the figures and tables shown in the paper is to run the following scripts:
 ```python scripts/tables/tables.py --from-table-data```
 This will generate the following output
 ```
@@ -60,14 +74,10 @@ output/
 |   `-- Figure_S1.png
 `-- supplement_tables
 ```
-Note if you want to only generate a specific figure then use `--figure-<n>` instead of `--all-figures`. This will generate the figure and the corresponding supplement figures
-# Pipeline
-tldr:
-- do_all.sh
-- get raw results file:
-- ```wget TODO```vv
-- and here ``wget nromal res`
-- run analyse_res.py
-- run ana_normal.py
-- run_paper figure.py
-- notebooks
+
+
+
+
+
+Note if you want only to generate a specific figure then use `--figure-<n>` instead of `--all-figures`. This will create the figure and the corresponding supplement figures
+
