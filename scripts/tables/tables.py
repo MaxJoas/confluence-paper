@@ -5,7 +5,7 @@ import argparse
 def parse_args():
     parser = argparse.ArgumentParser(description="Table 1")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--from-agg", action="store_true", help="Use aggregated results")
+    group.add_argument("--from-aggregation", action="store_true", help="Use aggregated results")
     group.add_argument("--from-table-data", action="store_true", help="Use table data")
     return parser.parse_args()
 
@@ -135,9 +135,14 @@ if __name__ == "__main__":
         input_file = os.path.join(os.path.join("data","LEVEL_1"), "00_tables", "00_raw_data_for_all_tables.pkl")
         data_dicts = pd.read_pickle(input_file)
         new_data_dict = {key.split('/')[-1]: value for key, value in data_dicts.items()}
-    if args.from_agg:
-        # TODO
-        pass
+    elif args.from_aggregation:
+        input_file = os.path.join("output", "data", "LEVEL_2", "all_dicts.pkl")
+        if not os.path.exists(input_file):
+            raise FileNotFoundError(f"File not found: {input_file}, run scripts/aggregate/analyse_res.py first")
+        data_dicts = pd.read_pickle(input_file)
+        new_data_dict = {key.split('/')[-1]: value for key, value in data_dicts.items()}
+    else:
+        raise ValueError("Invalid argument, use --from-table-data or --from-aggregation")
 
 
     # Sort the new dictionary by keys

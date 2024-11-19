@@ -803,6 +803,37 @@ def plot_goal_dep_agg_with_errorbars(base_dict, method):
     logger.info(f"Total: {len(base_dict)} plots, Skips: {skips}")
 
 
+def download_data():
+    url = "https://cloud.scadsai.uni-leipzig.de/index.php/s/CfgMAMbeJKeo34w/download/R1_RES_FILES_ONLY2.tar.gz"
+    outpath = os.path.join("output", "data", "LEVEL_3")
+    if not os.path.exists(outpath):
+        os.makedirs(outpath, exist_ok=True)
+    import requests
+    import tarfile
+    try:
+        # Make the HTTP GET request
+        with requests.get(url, stream=True) as response:
+            response.raise_for_status()  # Raise an exception for HTTP errors
+            # Write the response content to a file in chunks
+            with open(os.path.join(outpath, "R1_RES_FILES_ONLY2.tar.gz"), 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):  # 8 KB chunks
+                    if chunk:  # Skip empty chunks
+                        f.write(chunk)
+        print(f"Downloaded file saved to {outpath}")
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+    # now extract the tar.gz file
+    filepath = os.path.join(outpath, "R1_RES_FILES_ONLY2.tar.gz")
+    with tarfile.open(filepath, 'r:gz') as tar:
+        tar.extractall(path=outpath)
+    respath_file = os.path.join("output/data/LEVEL_3/R1_RES_FILES_ONLY2/respaths.csv")
+    df = pd.read_csv(respath_file)
+    print(df)
+    df["path"] = df["path"].str.replace("../confluence-results/final-results/R1/", "output/data/LEVEL_3/R1_RES_FILES_ONLY2/")
+    respath_file = os.path.join("output/data/LEVEL_3/R1_RES_FILES_ONLY2/new_respaths.csv")
+    df.to_csv(respath_file, index=False)
+    return df
+
 if __name__ == "__main__":
     global logger
     logger = logging.getLogger(__name__)
@@ -815,7 +846,9 @@ if __name__ == "__main__":
     fh.setLevel(logging.INFO)
     fh.setFormatter(formatter)
     logger.addHandler(fh)
-
+    logger.info("Starting to download data")
+    # respath = download_data()
+    logger.info("Data downloaded")
     respath = sys.argv[1]
     paths_df = pd.read_csv(respath, index_col=0)
     logger.info(f"paths_df: {paths_df}")
@@ -836,7 +869,7 @@ if __name__ == "__main__":
 
         all_aggregations, all_rand_movie_dicts, all_al_movie_dicts = [], [], []
 
-        for i in range(int(sys.argv[2])):
+        for i in range(10):
             base1 = tup[0].split("/")[-1] + f"_{i}"
             base2 = tup[1].split("/")[-1] + f"_{i}"
             sub1 = os.path.join(tup[0], base1)
@@ -969,6 +1002,7 @@ if __name__ == "__main__":
         merged_df.to_csv(
             os.path.join(aggregated_res_path, "999_DATASOURCE1_FINAL_merged_al_vs_rand.csv")
         )
+        logger.info(f"Saving merged_df to {aggregated_res_path}")
         logger.info(f"Final merged_df shape: {merged_df.shape}")
 
         # Plot based on the aggregated movie data
@@ -984,7 +1018,12 @@ if __name__ == "__main__":
         plot_rand_vs_al_aggr(merged_df=merged_df, outpath=aggregated_res_path)
         plot_rand_vs_al_aggr_no_error(merged_df=merged_df, outpath=aggregated_res_path)
 
-    aggregated_all_path = os.path.join(h[0], h[1], h[2], h[3], "AGGREGATED_RESULTS", "all_dicts.pkl")
+    # aggregated_all_path = os.path.join(h[0], h[1], h[2], h[3], "AGGREGATED_RESULTS", "all_dicts.pkl")
+    aggregated_all_path = os.path.join("output", "data", "LEVEL_2")
+    if not os.path.exists(aggregated_all_path):
+        os.makedirs(aggregated_all_path, exist_ok=True)
+    aggregated_all_path = os.path.join(aggregated_all_path, "all_dicts.pkl")
+    logger.info(f"Saving all_dicts to {aggregated_all_path}")
     with open(aggregated_all_path, "wb") as f:
         pickle.dump(all_dicts, f)
 
@@ -994,3 +1033,5 @@ if __name__ == "__main__":
     base_dict = prepare_goal_dep_aggrplot(all_aggr_res_paths)
     plot_goal_dep_agg_with_errorbars(base_dict, "al")
     plot_goal_dep_agg_with_errorbars(base_dict, "rand")
+    import shutil
+    shutil.move(os.path.join("output/data/LEVEL_3/R1_RES_FILES_ONLY2/AGGREGATED_RESULTS/"), os.path.join("output/data/LEVEL_2"))
