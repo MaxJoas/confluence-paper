@@ -805,6 +805,7 @@ def plot_goal_dep_agg_with_errorbars(base_dict, method):
 
 def download_data():
     url = "https://cloud.scadsai.uni-leipzig.de/index.php/s/CfgMAMbeJKeo34w/download/R1_RES_FILES_ONLY2.tar.gz"
+
     outpath = os.path.join("output", "data", "LEVEL_3")
     if not os.path.exists(outpath):
         os.makedirs(outpath, exist_ok=True)

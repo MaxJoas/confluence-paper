@@ -1,5 +1,7 @@
 import seaborn as sns
-import argparse
+from urllib.parse import urlparse, urlencode
+import requests
+import zipfile
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -29,6 +31,7 @@ def process_results(folders):
         print(f"len subfolders after filter: {len(subfolders)}")
         for f in subfolders:
             print(f"folder: {f}")
+
             df = pd.read_csv(os.path.join(subfolder, f, "eval_metrics.csv"))
             model_name = f.split("-")[0]
             dataset_name = f.replace(model_name, "").replace("_normal", "")
@@ -63,6 +66,10 @@ def plot_bars(res_df, respath, plot_errorbars=True):
         "-lc-internal": "LC Internal",
         "-lc-external": "LC External",
         "-lc-internallazy": "LC Internal Lazy",
+        "-sc_0shot": "SC",
+        "-lc-internal_0shot": "LC Internal",
+        "-lc-external_0shot": "LC External",
+        "-lc-internallazy_0shot": "LC Internal Lazy",
     }
     friendly_data_names = [DATA_GROUP_FRIENDLY_NAME[name] for name in data_names]
 
@@ -99,7 +106,10 @@ def plot_bars(res_df, respath, plot_errorbars=True):
 
             offset += 8
 
-        plt.xticks([1.5, 9.5, 17.5, 25.5, 33.5], models)
+        if len(models) == 5:
+            plt.xticks([1.5, 9.5, 17.5, 25.5, 33.5], models)
+        if len(models) == 3:    
+            plt.xticks([1.5, 10.0, 18.5], models)
         # Create a legend for the data groups
         handles = [
             plt.Rectangle((0, 0), 1, 1, color=group_colors[group])
@@ -126,29 +136,94 @@ def plot_bars(res_df, respath, plot_errorbars=True):
         plt.close()
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--outpath",
-        help="output path",
-        type=str,
-        default="NORMAL_CONFLUENCE_AGGREGATED",
-    )
-    parser.add_argument(
-        "--result-base-dir",
-        default="results_normal",
-        dest="basedir",
-        type=str,
-        help="root folder where the results are store, usually results_normal or results_0shot",
-    )
+# same for 0shot
+# change ouputfile so that there are in output/data/LEVEL_2
+# cange all_figures.py to use the data from this output
+def download_and_process_normal():
+    url = "https://cloud.scadsai.uni-leipzig.de/index.php/s/qbyfMj5byrdQTQc/download/normal_and_zero_shot_results.zip"
+    outpath = os.path.join("output", "data", "LEVEL_3")
+    if not os.path.exists(outpath):
+        os.makedirs(outpath, exist_ok=True)
+    import requests
 
-    args = parser.parse_args()
-    result_base_dir = args.basedir
-    respath = args.outpath
+    try:
+        # Make the HTTP GET request
+        with requests.get(url, stream=True) as response:
+            response.raise_for_status()  # Raise an exception for HTTP errors
+            # Write the response content to a file in chunks
+            with open(
+                os.path.join(outpath, "normal_confluence_results.zip"), "wb"
+            ) as f:
+                for chunk in response.iter_content(chunk_size=8192):  # 8 KB chunks
+                    if chunk:  # Skip empty chunks
+                        f.write(chunk)
+        print(f"Downloaded file saved to {outpath}")
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+    # now extract the tar.gz file
+    filepath = os.path.join(outpath, "normal_confluence_results.zip")
+    # unzip
+    with zipfile.ZipFile(filepath, "r") as zip_ref:
+        zip_ref.extractall(outpath)
+
+def download_from_dropbox(url, extract_path='.'):
+    """
+    Download a file from a Dropbox sharing link and extract it.
+    
+    Parameters:
+    url (str): Dropbox sharing URL
+    extract_path (str): Directory where the contents should be extracted (default: current directory)
+    
+    Returns:
+    str: Path where the contents were extracted
+    """
+    try:
+        os.makedirs(extract_path, exist_ok=True)
+        
+        download_url = url.replace('dl=0', 'dl=1')
+        
+        filename = os.path.basename(urlparse(url).path)
+        if not filename.endswith('.zip'):
+            filename += '.zip'
+        
+        download_path = os.path.join(extract_path, filename)
+        
+        print(f"Downloading from Dropbox...")
+        response = requests.get(download_url, stream=True)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        
+        with open(download_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        print(f"Extracting {filename}...")
+        with zipfile.ZipFile(download_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_path)
+        os.remove(download_path)
+        
+        print(f"Successfully downloaded and extracted to {extract_path}")
+        return extract_path
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Error downloading file: {e}")
+        raise
+    except zipfile.BadZipFile as e:
+        print(f"Error extracting file: {e}")
+        raise
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        raise
+
+
+def aggregate(result_base_dir):
+    respath = os.path.join("output", "data", "LEVEL_2", result_base_dir)
+    inbase = os.path.join("output", "data", "LEVEL_3", "normal_and_zero_shot_results")
+    if not os.path.exists(respath):
+        os.makedirs(respath)
     folders = [
-        os.path.join("confluence", result_base_dir),
-        os.path.join("confluence-sam", result_base_dir),
-        os.path.join("confluence-unet", result_base_dir),
+        os.path.join(inbase, "confluence", result_base_dir),
+        os.path.join(inbase, "confluence-sam", result_base_dir),
+        os.path.join(inbase, "confluence-unet", result_base_dir),
     ]
     if not os.path.exists(respath):
         os.makedirs(respath)
@@ -158,7 +233,19 @@ if __name__ == "__main__":
     model_names = res_df["model(col)"].unique()
     res_df.to_csv(os.path.join(respath, "results.csv"))
     model_names = model_names.tolist()
-    print(f"model_names: {model_names}")
-    print(res_df)
     plot_bars(res_df, respath)
     plot_bars(res_df, respath, False)
+
+
+
+if __name__ == "__main__":
+
+    # url = "https://www.dropbox.com/scl/fi/isiiysz2qmrxmtttjtls1/normal_and_zero_shot_results.zip?rlkey=u0ejj3dowwqwftj28llrlfcab&st=qojk38eq&dl=1"
+    outpath = os.path.join("output", "data", "LEVEL_3")
+    if not os.path.exists(outpath):
+        os.makedirs(outpath, exist_ok=True)
+    # download_from_dropbox(url=url, extract_path=outpath)
+
+    download_and_process_normal()
+    aggregate("results_normal")
+    aggregate("results_0shot")
