@@ -11,6 +11,19 @@ import argparse
 import pickle
 from collections import defaultdict
 import matplotlib.cm as cm
+import warnings
+
+# Suppress specific NumPy warning
+warnings.filterwarnings("ignore", message="Signature .* does not match any known type")
+# Suppress specific warnings
+warnings.filterwarnings("ignore", message="Signature .* does not match any known type")
+warnings.filterwarnings("ignore", message="constrained_layout not applied")
+import warnings
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", message="Signature .* does not match any known type")
+    import numpy
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process data from different sources.")

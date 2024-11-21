@@ -212,9 +212,6 @@ if __name__ == "__main__":
         os.makedirs(outpath, exist_ok=True)
     # download_from_dropbox(url=url, extract_path=outpath)
 
-    download_and_process_normal()
-    import shutil
-    shutil.move(os.path.join("output/data/LEVEL_3/normal_and_zero_shot_results/normal_and_zero_shot_results/confluence-sam/results_oshot/"),
-                os.path.join("output/data/LEVEL_3/normal_and_zero_shot_results/normal_and_zero_shot_results/confluence-sam/results_0shot/"))
+    # download_and_process_normal()
     aggregate("results_normal")
     aggregate("results_0shot")
