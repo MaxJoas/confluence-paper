@@ -804,6 +804,12 @@ def plot_goal_dep_agg_with_errorbars(base_dict, method):
 
 
 def download_data():
+
+    respath_file = os.path.join("output/data/LEVEL_3/R1_RES_FILES_ONLY2/new_respaths.csv")
+    if os.path.exists(respath_file):
+        df = pd.read_csv(respath_file)
+        return df
+    
     url = "https://cloud.scadsai.uni-leipzig.de/index.php/s/CfgMAMbeJKeo34w/download/R1_RES_FILES_ONLY2.tar.gz"
 
     outpath = os.path.join("output", "data", "LEVEL_3")
@@ -831,7 +837,6 @@ def download_data():
     df = pd.read_csv(respath_file)
     print(df)
     df["path"] = df["path"].str.replace("../confluence-results/final-results/R1/", "output/data/LEVEL_3/R1_RES_FILES_ONLY2/")
-    respath_file = os.path.join("output/data/LEVEL_3/R1_RES_FILES_ONLY2/new_respaths.csv")
     df.to_csv(respath_file, index=False)
     return df
 
@@ -848,9 +853,8 @@ if __name__ == "__main__":
     fh.setFormatter(formatter)
     logger.addHandler(fh)
     logger.info("Starting to download data")
-    respath = download_data()
     logger.info("Data downloaded")
-    paths_df = pd.read_csv(respath, index_col=0)
+    paths_df = download_data()
     logger.info(f"paths_df: {paths_df}")
 
     mapping = {k: k.replace("-al", "-rand") for k in paths_df.index if "-al" in k}
