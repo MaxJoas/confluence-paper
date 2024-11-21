@@ -807,7 +807,7 @@ def download_data():
 
     respath_file = os.path.join("output/data/LEVEL_3/R1_RES_FILES_ONLY2/new_respaths.csv")
     if os.path.exists(respath_file):
-        df = pd.read_csv(respath_file)
+        df = pd.read_csv(respath_file, index_col=0)
         return df
     
     url = "https://cloud.scadsai.uni-leipzig.de/index.php/s/CfgMAMbeJKeo34w/download/R1_RES_FILES_ONLY2.tar.gz"
