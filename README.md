@@ -5,19 +5,8 @@ We show how to obtain the in the paper shown results on three levels:
 2. LEVEL 2: How to get the plots and figures from the aggregation of the raw results
 3. LEVEL 3: How to aggregate the raw results
 
-## Requirements
-- pip
-- python
+The following diagram visualizes the process:
 
-## Installation
-Install the requirements from the `requirements.txt` file in the environment of your choice for example:
-```
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-## Get figures and tables from LEVEL 1 (recommended)
 ```mermaid
 graph LR
     raw_data["Raw Data / LEVEL 3"] -->|analyse_res.py/ana_normal.py| aggregated_data["Aggregated Data / LEVEL 2"]
@@ -25,8 +14,28 @@ graph LR
 
 ```
 
-We've already uploaded the fully prepared and aggregated data to this very repo. So the easiest way to get the figures and tables shown in the paper is to run the following scripts:
-```python scripts/tables/tables.py --from-table-data```
+## Requirements
+- pip (tested in version 22.0.2)
+- Python (tested in version 3.10)
+
+## Installation
+- clone this repo
+- install the requirements from the `requirements.txt` file in the environment of your choice for example:
+```
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Get figures and tables from LEVEL 1 (recommended)
+
+
+We've already uploaded the fully prepared and aggregated data to this repo. So the easiest way to get the figures and tables shown in the paper is to run the following scripts:
+
+```
+python scripts/tables/tables.py --from-table-data
+```
+
 This will generate the following output
 ```
 output/
@@ -43,7 +52,10 @@ output/
     `-- Table_S5_iou_min_max_steps.csv
 ```
 
-```python scripts/figures/all_figures.py --from-figure-data --all-figures```
+To generate the figures
+```
+python scripts/figures/all_figures.py --from-figure-data --all-figures
+```
 
 This will result in:
 ```
@@ -75,9 +87,14 @@ output/
 `-- supplement_tables
 ```
 
+Note that if you want only to generate a specific figure, use `--figure-<n>` instead of `--all-figures`. This will create the figure and the corresponding supplement figures
 
+## Aggregate raw results (LEVEL 3) and get paper table/figure (LEVEL 2)
+To comprehend the data aggregation from the raw results of our experiments to the tables and figures shown in the paper, we provide scripts that download the raw data and run the aggregation.
+Running these scripts will download roughly 13GB of data to your machine and may take up to 30 minutes.
+To obtain the and aggregate the results of the full training vs zero shot experiments, run the following script:
+```
+python scripts/aggregate/ana_normal.py
+```
 
-
-
-Note if you want only to generate a specific figure then use `--figure-<n>` instead of `--all-figures`. This will create the figure and the corresponding supplement figures
 
