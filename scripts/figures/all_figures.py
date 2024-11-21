@@ -752,109 +752,109 @@ if __name__ == "__main__":
 
 
     if args.from_aggregation:
-        # datafile = os.path.join("output", "data", "LEVEL_2", "all_dicts.pkl")
-        # print(datafile)
-        # if not os.path.exists(datafile):
-        #     raise FileNotFoundError(
-        #         f"Data {datafile} file not found. Please run data processing scripts/aggregate/analyse_res.py first"
-        #     ) 
-        # data_dicts = pd.read_pickle(datafile)
-        # # Create a new dictionary with modified keys
-        # new_data_dict = {key.split("/")[-1]: value for key, value in data_dicts.items()}
-        # sorted_data_dict = dict(sorted(new_data_dict.items()))
-        # with open(
-        #     os.path.join("output", "data", "LEVEL_1", "01_figure_1_data_dict.pkl"), "wb"
-        # ) as f:
-        #     pickle.dump(sorted_data_dict, f)
-        # # same for figure 2
-        # with open(
-        #     os.path.join("output", "data", "LEVEL_1", "02_figure_2_data_dict.pkl"), "wb"
-        # ) as f:
-        #     pickle.dump(sorted_data_dict, f)
-        # if not os.path.exists(os.path.join("output", "01_figure_1_data_human_readable")):
-        #     os.makedirs(
-        #         os.path.join(
-        #             "output", "data", "LEVEL_1", "01_figure_1_data_human_readable"
-        #         ),
-        #         exist_ok=True,
-        #     )
-        # save_dict = {
-        #     key: [
-        #         df.to_csv(
-        #             os.path.join(
-        #                 "output",
-        #                 "data",
-        #                 "LEVEL_1",
-        #                 "01_figure_1_data_human_readable",
-        #                 f"df_{key}_{i}",
-        #             )
-        #         )
-        #         for i, df in enumerate(value)
-        #     ]
-        #     for key, value in sorted_data_dict.items()
-        # }
-        # # same for figure 2
+        datafile = os.path.join("output", "data", "LEVEL_2", "all_dicts.pkl")
+        print(datafile)
+        if not os.path.exists(datafile):
+            raise FileNotFoundError(
+                f"Data {datafile} file not found. Please run data processing scripts/aggregate/analyse_res.py first"
+            ) 
+        data_dicts = pd.read_pickle(datafile)
+        # Create a new dictionary with modified keys
+        new_data_dict = {key.split("/")[-1]: value for key, value in data_dicts.items()}
+        sorted_data_dict = dict(sorted(new_data_dict.items()))
+        with open(
+            os.path.join("output", "data", "LEVEL_1", "01_figure_1_data_dict.pkl"), "wb"
+        ) as f:
+            pickle.dump(sorted_data_dict, f)
+        # same for figure 2
+        with open(
+            os.path.join("output", "data", "LEVEL_1", "02_figure_2_data_dict.pkl"), "wb"
+        ) as f:
+            pickle.dump(sorted_data_dict, f)
+        if not os.path.exists(os.path.join("output", "01_figure_1_data_human_readable")):
+            os.makedirs(
+                os.path.join(
+                    "output", "data", "LEVEL_1", "01_figure_1_data_human_readable"
+                ),
+                exist_ok=True,
+            )
+        save_dict = {
+            key: [
+                df.to_csv(
+                    os.path.join(
+                        "output",
+                        "data",
+                        "LEVEL_1",
+                        "01_figure_1_data_human_readable",
+                        f"df_{key}_{i}",
+                    )
+                )
+                for i, df in enumerate(value)
+            ]
+            for key, value in sorted_data_dict.items()
+        }
+        # same for figure 2
 
-        # if not os.path.exists(
-        #     os.path.join("output", "data", "LEVEL_1", "02_figure_2_data_human_readable")
-        # ):
-        #     os.makedirs(
-        #         os.path.join(
-        #             "output", "data", "LEVEL_1", "02_figure_2_data_human_readable"
-        #         ),
-        #         exist_ok=True,
-        #     )
-        # save_dict = {
-        #     key: [
-        #         df.to_csv(
-        #             os.path.join(
-        #                 "output",
-        #                 "data",
-        #                 "LEVEL_1",
-        #                 "02_figure_2_data_human_readable",
-        #                 f"df_{key}_{i}",
-        #             )
-        #         )
-        #         for i, df in enumerate(value)
-        #     ]
-        #     for key, value in sorted_data_dict.items()
-        # }
-        # # same for figure 3
-        # relevant_dirs = ["cp-sc", "d2-sc", "sam-sc", "unet-sc"]
-        # dataframes = []
-        # base_path = os.path.join("output/data/LEVEL_2/AGGREGATED_RESULTS/")
-        # for folder in relevant_dirs:
-        #     path = os.path.join(base_path, folder, "999_DATASOURCE2_movie_plot_data.csv")
-        #     if not os.path.exists(path):
-        #         print(f"Path {path} does not exist")
-        #         raise FileNotFoundError("Path does not exist")
-        #     df = pd.read_csv(path)
-        #     dataframes.append(df)
-        # with open(
-        #     os.path.join("output", "data", "LEVEL_1", "03_figure_3_data.pkl"), "wb"
-        # ) as f:
-        #     pickle.dump(dataframes, f)
+        if not os.path.exists(
+            os.path.join("output", "data", "LEVEL_1", "02_figure_2_data_human_readable")
+        ):
+            os.makedirs(
+                os.path.join(
+                    "output", "data", "LEVEL_1", "02_figure_2_data_human_readable"
+                ),
+                exist_ok=True,
+            )
+        save_dict = {
+            key: [
+                df.to_csv(
+                    os.path.join(
+                        "output",
+                        "data",
+                        "LEVEL_1",
+                        "02_figure_2_data_human_readable",
+                        f"df_{key}_{i}",
+                    )
+                )
+                for i, df in enumerate(value)
+            ]
+            for key, value in sorted_data_dict.items()
+        }
+        # same for figure 3
+        relevant_dirs = ["cp-sc", "d2-sc", "sam-sc", "unet-sc"]
+        dataframes = []
+        base_path = os.path.join("output/data/LEVEL_2/AGGREGATED_RESULTS/")
+        for folder in relevant_dirs:
+            path = os.path.join(base_path, folder, "999_DATASOURCE2_movie_plot_data.csv")
+            if not os.path.exists(path):
+                print(f"Path {path} does not exist")
+                raise FileNotFoundError("Path does not exist")
+            df = pd.read_csv(path)
+            dataframes.append(df)
+        with open(
+            os.path.join("output", "data", "LEVEL_1", "03_figure_3_data.pkl"), "wb"
+        ) as f:
+            pickle.dump(dataframes, f)
 
-        # if not os.path.exists(
-        #     os.path.join("output", "data", "LEVEL_3", "03_figure_3_data_human_readable")
-        # ):
-        #     os.makedirs(
-        #         os.path.join(
-        #             "output", "data", "LEVEL_1", "03_figure_3_data_human_readable"
-        #         ),
-        #         exist_ok=True,
-        #     )
-        # for idx, df in enumerate(dataframes):
-        #     df.to_csv(
-        #         os.path.join(
-        #             "output",
-        #             "data",
-        #             "LEVEL_1",
-        #             "03_figure_3_data_human_readable",
-        #             f"df_{titles[idx]}",
-        #         )
-        #     )
-        # print("Saved dataframes to disk")
+        if not os.path.exists(
+            os.path.join("output", "data", "LEVEL_3", "03_figure_3_data_human_readable")
+        ):
+            os.makedirs(
+                os.path.join(
+                    "output", "data", "LEVEL_1", "03_figure_3_data_human_readable"
+                ),
+                exist_ok=True,
+            )
+        for idx, df in enumerate(dataframes):
+            df.to_csv(
+                os.path.join(
+                    "output",
+                    "data",
+                    "LEVEL_1",
+                    "03_figure_3_data_human_readable",
+                    f"df_{titles[idx]}",
+                )
+            )
+        print("Saved dataframes to disk")
 
         # figure
         folder_4 = os.path.join("output", "data", "LEVEL_1", "04_figure_4")
