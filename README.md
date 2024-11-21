@@ -1,4 +1,4 @@
-# confluence-paper
+# Introduction
 This repository accompanies our paper "How to estimate confluence lazily".
 We show how to obtain the in the paper shown results on three levels:
 1. LEVEL 1: How to get the plots and tables from specifically for the plotting aggregated data
@@ -96,5 +96,20 @@ To obtain the and aggregate the results of the full training vs zero shot experi
 ```
 python scripts/aggregate/ana_normal.py
 ```
+To aggregate the raw results of the Active Learning experiments, please run the following scripts:
 
+```
+python scripts/aggregate/analyse_res.py
+```
+This was the final step of LEVEL3 (raw -> aggregation). Now you can also get the tables and figures from this data with:
 
+```
+python scripts/tables/tables.py --from-aggregation
+```
+This script will generate not only the plots and figures, but also the figure and table-specific input data, that we used in LEVEL 1
+
+### Generation of raw results
+Please refer to these three repositories for detailed information:
+- [Detectron2 and Cellpose](https://git.informatik.uni-leipzig.de/joas/confluence/-/tree/main?ref_type=heads)
+- [U-Net](https://git.informatik.uni-leipzig.de/joas/confluence-unet)
+- [Segment Anything Model](https://git.informatik.uni-leipzig.de/joas/confluence-sam)
