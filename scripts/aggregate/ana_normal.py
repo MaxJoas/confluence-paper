@@ -183,7 +183,7 @@ def download_and_process_normal():
 
 def aggregate(result_base_dir):
     respath = os.path.join("output", "data", "LEVEL_2", result_base_dir)
-    inbase = os.path.join("output", "data", "LEVEL_3", "normal_and_zero_shot_results", "normal_and_zero_shot_results")
+    inbase = os.path.join("output", "data", "LEVEL_3", "normal_and_zero_shot_results")
     if not os.path.exists(respath):
         os.makedirs(respath)
     folders = [
