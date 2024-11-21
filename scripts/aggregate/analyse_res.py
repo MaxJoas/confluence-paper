@@ -848,9 +848,8 @@ if __name__ == "__main__":
     fh.setFormatter(formatter)
     logger.addHandler(fh)
     logger.info("Starting to download data")
-    # respath = download_data()
+    respath = download_data()
     logger.info("Data downloaded")
-    respath = sys.argv[1]
     paths_df = pd.read_csv(respath, index_col=0)
     logger.info(f"paths_df: {paths_df}")
 

@@ -206,12 +206,10 @@ def aggregate(result_base_dir):
 
 if __name__ == "__main__":
 
-    # url = "https://www.dropbox.com/scl/fi/isiiysz2qmrxmtttjtls1/normal_and_zero_shot_results.zip?rlkey=u0ejj3dowwqwftj28llrlfcab&st=qojk38eq&dl=1"
     outpath = os.path.join("output", "data", "LEVEL_3")
     if not os.path.exists(outpath):
         os.makedirs(outpath, exist_ok=True)
-    # download_from_dropbox(url=url, extract_path=outpath)
 
-    # download_and_process_normal()
+    download_and_process_normal()
     aggregate("results_normal")
     aggregate("results_0shot")
