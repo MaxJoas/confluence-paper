@@ -25,6 +25,15 @@ with warnings.catch_warnings():
     import numpy
 
 
+FONTSIZE = 40
+# PALETTE = sns.set_palette("Set1", 2)
+# PALETTE=["#F5017E", "#00A775" ]
+light = "#FF7F0F"
+light2 = "#A1D66A"
+dark = "#016AA3"
+dark2 = "#211C3B"
+PALETTE=["#E6298A", "#E6AA03"]
+PALETTE = [light2, dark2]
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Process data from different sources.")
 
@@ -71,6 +80,226 @@ def parse_arguments():
 
 
 # FIGURE 1 ----------------------------------------------
+def figure_1_scale(data_dict, metric, outpath, share_y=True):
+    """
+    Create a grid of plots for the specified metric, comparing AL vs. random
+    methods across all model-dataset combinations in data_dict.
+    Y-axis scales are fixed within each row (same model).
+
+    Args:
+        data_dict: Dictionary with model-dataset keys and lists of result DataFrames.
+        metric: The metric to plot (e.g., 'iou', 'accuracy').
+        outpath: Path to save the grid plot image.
+        share_y: If True, shares y-axis within each row. If False, each plot has its own scale.
+    """
+    palette = PALETTE
+    sns.set_style("whitegrid")
+    plt.rcParams.update({"font.size": FONTSIZE, "font.weight": "bold"})
+    METHOD_COLORS = {"al": palette[1], "rand": palette[0]}
+
+    METHOD_MARKERS = {"al": "o", "rand": "x"}
+    METHOD_LINESTYLES = {"al": "-", "rand": "--"}
+    METRIC_FRIENDLY_NAME = {"iou": "Mean IoU", "dAbsAbsConf": "Mean Δ Confluence"}
+
+    EXPERIMENT_FRIENDLY_NAME = {
+        "unet-lc-internal-al": "U-Net LC Internal",
+        "d2-lc-internal-al": "D2 LC Internal",
+        "sam-lc-internal-al": "SAM LC Internal",
+        "cp-lc-internal-al": "CP LC Internal",
+        "unet-lc-external-al": "U-Net LC External",
+        "d2-lc-external-al": "D2 LC External",
+        "sam-lc-external-al": "SAM LC External",
+        "cp-lc-external-al": "CP LC External",
+        "unet-sc-al": "U-Net SC",
+        "d2-sc-al": "D2 SC",
+        "sam-sc-al": "SAM SC",
+        "cp-sc-al": "CP SC",
+        "unet-lc-internallazy-al": "U-Net LC Internal Lazy",
+        "d2-lc-internallazy-al": "D2 LC Internal Lazy",
+        "sam-lc-internallazy-al": "SAM LC Internal Lazy",
+        "cp-lc-internallazy-al": "CP LC Internal Lazy",
+    }
+
+    # always 1 except for external datasets there it is 10
+    STEP_SIZE_DICT = {
+        "unet-lc-internal-al": 1,
+        "d2-lc-internal-al": 1,
+        "sam-lc-internal-al": 1,
+        "cp-lc-internal-al": 1,
+        "unet-lc-external-al": 10,
+        "d2-lc-external-al": 10,
+        "sam-lc-external-al": 10,
+        "cp-lc-external-al": 10,
+        "unet-sc-al": 1,
+        "d2-sc-al": 1,
+        "sam-sc-al": 1,
+        "cp-sc-al": 1,
+        "unet-lc-internallazy-al": 1,
+        "d2-lc-internallazy-al": 1,
+        "sam-lc-internallazy-al": 1,
+        "cp-lc-internallazy-al": 1,
+    }
+    INITIAL_DATSET_SIZE_DICT = {
+        "unet-lc-internal-al": 2,
+        "d2-lc-internal-al": 2,
+        "sam-lc-internal-al": 2,
+        "cp-lc-internal-al": 2,
+        "unet-lc-external-al": 10,
+        "d2-lc-external-al": 10,
+        "sam-lc-external-al": 10,
+        "cp-lc-external-al": 10,
+        "unet-sc-al": 2,
+        "d2-sc-al": 2,
+        "sam-sc-al": 2,
+        "cp-sc-al": 2,
+        "unet-lc-internallazy-al": 2,
+        "d2-lc-internallazy-al": 2,
+        "sam-lc-internallazy-al": 2,
+        "cp-lc-internallazy-al": 2,
+    }
+
+    P_VALUE_DICT = defaultdict(list)
+        # Organize data by model
+    model_dict = {}
+    for key, df_list in data_dict.items():
+        model_name = key.split("-")[0]
+        if model_name not in model_dict:
+            model_dict[model_name] = {}
+        model_dict[model_name][key] = df_list
+
+    num_models = len(model_dict)
+    num_datasets = max(len(datasets) for datasets in model_dict.values())
+
+    fig, axes = plt.subplots(
+        num_models, num_datasets, figsize=(40, num_models * 7), constrained_layout=True
+    )
+
+    if num_models == 1:
+        axes = axes.reshape(1, -1)
+
+    # First pass: collect y-limits and max values for each model (row)
+    model_ylims = {}
+    model_max_values = {}
+    if share_y:
+        for model, datasets in model_dict.items():
+            all_values = []
+            for df_list in datasets.values():
+                combined_df = pd.concat(df_list, ignore_index=True)
+                all_values.extend(combined_df[metric].values)
+            
+            if all_values:
+                y_min = min(all_values)
+                y_max = max(all_values)
+                y_range = y_max - y_min
+                padding = y_range * 0.02  # Reduced padding since we'll position markers differently
+                model_ylims[model] = (y_min - padding, y_max + padding)
+                model_max_values[model] = y_max
+
+    # Second pass: create plots
+    for i, (model, datasets) in enumerate(model_dict.items()):
+        for j, (key, df_list) in enumerate(datasets.items()):
+            combined_df = pd.concat(df_list, ignore_index=True)
+            steps = sorted(combined_df["step"].unique())
+            ax = axes[i, j]
+
+            # Set the y-limits for this subplot based on the model (row)
+            if share_y and model in model_ylims:
+                ax.set_ylim(model_ylims[model])
+
+            for stepcounter, step in enumerate(steps):
+                stepcounter += 1
+                step_data = combined_df[combined_df["step"] == step]
+
+                for k, method in enumerate(["al", "rand"]):
+                    offset = k * 0.8 #TODO play around
+                    method_data = step_data[step_data["method"] == method]
+                    n_images = step + int(INITIAL_DATSET_SIZE_DICT[key]) + 1
+
+                    mean = method_data[metric].mean()
+                    q25 = np.percentile(method_data[metric], 25)
+                    q75 = np.percentile(method_data[metric], 75)
+
+                    lower_err = abs(mean - q25)
+                    upper_err = abs(q75 - mean)
+
+                    label = method.upper() if step == steps[0] else ""
+                    ax.errorbar(
+                        n_images + offset,
+                        mean,
+                        yerr=[[lower_err], [upper_err]],
+                        # fmt=METHOD_MARKERS[method],
+                        fmt=METHOD_MARKERS[method] + METHOD_LINESTYLES[method],
+                        color=METHOD_COLORS[method],
+                        linewidth=5,
+                        # ls=METHOD_LINESTYLES[method],
+                        markersize=10,
+                        capsize=5,
+                        alpha=0.8,
+                        label=label,
+                    )
+                    offset = 0.0
+
+                # Statistical significance test
+                al_values = step_data[step_data["method"] == "al"][metric].values
+                rand_values = step_data[step_data["method"] == "rand"][metric].values
+
+                if len(al_values) > 0 and len(rand_values) > 0:
+                    _, p_value = stats.mannwhitneyu(
+                        al_values, rand_values, alternative="two-sided"
+                    )
+                    P_VALUE_DICT[key].append(p_value)
+
+                    if p_value < 0.05:
+                        # Position marker relative to the maximum value in the row
+                        if share_y and model in model_max_values:
+                            # Get the maximum value for this row and position marker slightly above it
+                            row_max = model_max_values[model]
+                            local_max = max(al_values.max(), rand_values.max())
+                            # Position marker between the local maximum and row maximum
+                            marker_y = local_max + (row_max - local_max) * 0.07
+                        else:
+                            # Fallback to current axis limits if not sharing y-axis
+                            current_max = max(al_values.max(), rand_values.max())
+                            marker_y = current_max * 1.02
+
+                        ax.text(
+                            n_images,
+                            marker_y,
+                            "*",
+                            ha="center",
+                            va="bottom",
+                            color="black",
+                            fontsize=25,
+                            weight="bold",
+                        )
+
+            ax.set_title(EXPERIMENT_FRIENDLY_NAME[key], fontweight="bold", fontsize=FONTSIZE)
+            ax.set_ylabel(METRIC_FRIENDLY_NAME[metric], fontweight="bold", fontsize=FONTSIZE)
+            ax.set_xlabel("N Images", fontweight="bold", fontsize=FONTSIZE)
+            # Explicitly set tick label font size for both axes
+            ax.tick_params(axis='x', which='major', labelsize=FONTSIZE-2, labelbottom=True)
+            ax.tick_params(axis='y', which='major', labelsize=FONTSIZE-2, labelleft=True)
+            
+            # ax.legend(title="Method", loc="upper right", fontsize=15)
+            ax.tick_params(axis="both", which="major", labelsize=16)
+            for label in ax.get_xticklabels() + ax.get_yticklabels():
+                label.set_fontweight("bold")
+                label.set_fontsize(FONTSIZE-10)
+    # Hide any unused subplots
+    for i in range(num_models):
+        for j in range(len(model_dict[list(model_dict.keys())[i]]), num_datasets):
+            axes[i, j].set_visible(False)
+
+    # Save the plot and p-values
+    if outpath:
+        plt.savefig(outpath, bbox_inches="tight", dpi=300)
+        p_values_df = pd.DataFrame.from_dict(P_VALUE_DICT, orient="index").transpose()
+        p_values_df.to_csv(outpath.replace("png", "") + "_p_values.csv")
+        print(f"Saved plot to {outpath}")
+    
+    plt.close()
+    return fig, axes
+    
 def figure_1(data_dict, metric, outpath, share_y=True):
     """
     Create a grid of plots for the specified metric, comparing AL vs. random
@@ -81,15 +310,17 @@ def figure_1(data_dict, metric, outpath, share_y=True):
         metric: The metric to plot (e.g., 'iou', 'accuracy').
         outpath: Path to save the grid plot image.
     """
-    # Define consistent colors using viridis colormap
-    palette = sns.color_palette("viridis", 2)
-    sns.set_style("darkgrid")
-    plt.rcParams.update({"font.size": 22, "font.weight": "bold"})
+    # Define consistent colors using Set1 colormap
+    # palette = ["#4575b4", "#fee090"]
+    palette = PALETTE
+    sns.set_style("whitegrid")
+    plt.rcParams.update({"font.size": FONTSIZE, "font.weight": "bold"})
     METHOD_COLORS = {"al": palette[1], "rand": palette[0]}
 
     METHOD_MARKERS = {"al": "o", "rand": "x"}
     METRIC_FRIENDLY_NAME = {"iou": "Mean IoU", "dAbsAbsConf": "Mean Δ Confluence"}
 
+    METHOD_LINESTYLES = {"al": "-", "rand": "--"}
     EXPERIMENT_FRIENDLY_NAME = {
         "unet-lc-internal-al": "U-Net LC Internal",
         "d2-lc-internal-al": "D2 LC Internal",
@@ -218,6 +449,7 @@ def figure_1(data_dict, metric, outpath, share_y=True):
                         fmt=METHOD_MARKERS[method],
                         color=METHOD_COLORS[method],
                         linewidth=5,
+                        # linestyle=METHOD_LINESTYLES[method],
                         markersize=10,
                         capsize=5,
                         alpha=0.8,
@@ -252,10 +484,10 @@ def figure_1(data_dict, metric, outpath, share_y=True):
                             weight="bold",
                         )
 
-            ax.set_title(EXPERIMENT_FRIENDLY_NAME[key], fontweight="bold")
-            ax.set_ylabel(METRIC_FRIENDLY_NAME[metric], fontweight="bold")
-            ax.set_xlabel("N Images", fontweight="bold")
-            ax.legend(title="Method", loc="upper right", fontsize=15)
+            ax.set_title(EXPERIMENT_FRIENDLY_NAME[key], fontweight="bold", fontsize=FONTSIZE)
+            ax.set_ylabel(METRIC_FRIENDLY_NAME[metric], fontweight="bold", fontsize=FONTSIZE)
+            ax.set_xlabel("N Images", fontweight="bold", fontsize=FONTSIZE)
+            # ax.legend(title="Method", loc="upper right", fontsize=15)
 
     # Hide any unused subplots
     for j in range(len(datasets), num_datasets):
@@ -264,7 +496,6 @@ def figure_1(data_dict, metric, outpath, share_y=True):
     # Save the plot
     if outpath:
         plt.savefig(outpath, bbox_inches="tight", dpi=300)
-    plt.show()
     plt.close()
     print(f"Saved plot to {outpath}")
 
@@ -292,9 +523,11 @@ def figure_2(data_dict, metric1, metric2, method, outpath):
 
     relevant_keys = [k for k in data_dict.keys() if "lc-internal" in k]
     models = sorted(set(k.split("-")[0] for k in relevant_keys))
-    palette = sns.color_palette("viridis", 2)
-    sns.set_style("darkgrid")
-    plt.rcParams.update({"font.size": 22, "font.weight": "bold"})
+    palette = PALETTE
+    # palette = ["#4575b4", "#fee090"]
+    # palette = ["#000080", "#FFDD00"] 
+    sns.set_style("whitegrid")
+    plt.rcParams.update({"font.size": 30, "font.weight": "bold"})
     METRIC_FRIENDLY_NAME = {"iou": "Mean IoU", "dAbsAbsConf": "Mean Δ Confluence"}
 
     EXPERIMENT_FRIENDLY_NAME = {
@@ -400,41 +633,221 @@ def figure_2(data_dict, metric1, metric2, method, outpath):
                         sig_marker,
                         ha="center",
                         color="black",
-                        fontsize=20,
+                        fontsize=30,
                         weight="bold",
                     )
             ax.set_title(
                 f"{EXPERIMENT_FRIENDLY_NAME[model]} - {METRIC_FRIENDLY_NAME[metric]}",
-                fontsize=20,
+                fontsize=30,
                 fontweight="bold",
             )
             # ax.set_title(f"{model} - {METRIC_FRIENDLY_NAME[metric]}", fontsize=20, fontweight="bold")
-            ax.set_xlabel("Step", fontweight="bold", fontsize=20)
+            ax.set_xlabel("Step", fontweight="bold", fontsize=30)
             ax.set_ylabel(
-                f"{METRIC_FRIENDLY_NAME[metric]}", fontweight="bold", fontsize=20
+                f"{METRIC_FRIENDLY_NAME[metric]}", fontweight="bold", fontsize=30
             )
 
-            ax.tick_params(axis="both", which="major", labelsize=16)
+            ax.tick_params(axis="both", which="major", labelsize=30)
             for label in ax.get_xticklabels() + ax.get_yticklabels():
                 label.set_fontweight("bold")
-                ax.legend(loc="best", fontsize=16)
+                ax.legend(loc="best", fontsize=22)
     plt.tight_layout()
-    plt.show()
-    plt.savefig(outpath)
+    plt.savefig(outpath, dpi=400)
     plt.close()
     p_values_df = pd.DataFrame.from_dict(P_VALUE_DICT, orient="index").transpose()
     p_values_df.to_csv(os.path.join(outpath.replace(".png", "_p_values.csv")))
 
 
+def figure_2_scale(data_dict, metric1, metric2, method, outpath):
+    """
+    Create a custom grid plot comparing 'lazy' vs. 'non-lazy' labeling for two metrics,
+    focusing on a single method (either 'al' or 'rand') at each step.
+    Y-axis scales are fixed within each row.
+    """
+    relevant_keys = [k for k in data_dict.keys() if "lc-internal" in k]
+    models = sorted(set(k.split("-")[0] for k in relevant_keys))
+    palette=PALETTE
+    # palette = ["#F5017E", "#00A775" ]
+    # from cmap import Colormap
+
+    # palette = Colormap('colorbrewer:Dark2')  # case insensitive
+    # palette = [palette[0], palette[2]]
+    # palette = sns.cubehelix_palette(n_colors=2)
+    sns.set_style("whitegrid")
+    plt.rcParams.update({"font.size": 30, "font.weight": "bold"})
+    METRIC_FRIENDLY_NAME = {"iou": "Mean IoU", "dAbsAbsConf": "Mean Δ Confluence"}
+    
+    EXPERIMENT_FRIENDLY_NAME = {
+        "unet": "U-Net",
+        "cp": "Cellpose",
+        "d2": "Detectron2",
+        "sam": "Segment Anything",
+    }
+    P_VALUE_DICT = defaultdict(list)
+
+    # Set up the custom grid layout
+    fig, axes = plt.subplots(len(models), 2, figsize=(24, 5 * len(models)))
+
+    # First pass: collect y-axis limits for each metric (row)
+    y_limits = {metric1: [float('inf'), float('-inf')], 
+                metric2: [float('inf'), float('-inf')]}
+    
+    # Collect min/max values for each metric across all models
+    for idx, model in enumerate(models):
+        nonlazy_key = f"{model}-lc-internal-{method}"
+        lazy_key = f"{model}-lc-internallazy-{method}"
+        
+        if nonlazy_key not in data_dict or lazy_key not in data_dict:
+            continue
+            
+        nonlazy_df = pd.concat(
+            [df[df["method"] == method] for df in data_dict[nonlazy_key]],
+            ignore_index=True,
+        )
+        lazy_df = pd.concat(
+            [df[df["method"] == method] for df in data_dict[lazy_key]],
+            ignore_index=True,
+        )
+        
+        # Update limits for metric1
+        y_limits[metric1][0] = min(y_limits[metric1][0], 
+                                 lazy_df[metric1].min(),
+                                 nonlazy_df[metric1].min())
+        y_limits[metric1][1] = max(y_limits[metric1][1], 
+                                 lazy_df[metric1].max(),
+                                 nonlazy_df[metric1].max())
+        
+        # Update limits for metric2
+        y_limits[metric2][0] = min(y_limits[metric2][0], 
+                                 lazy_df[metric2].min(),
+                                 nonlazy_df[metric2].min())
+        y_limits[metric2][1] = max(y_limits[metric2][1], 
+                                 lazy_df[metric2].max(),
+                                 nonlazy_df[metric2].max())
+
+    # Add some padding to the limits (5% on each end)
+    for metric in [metric1, metric2]:
+        range_size = y_limits[metric][1] - y_limits[metric][0]
+        padding = range_size * 0.05
+        y_limits[metric][0] -= padding
+        y_limits[metric][1] += padding
+
+    # Second pass: create the plots with fixed y-axis limits per row
+    for idx, model in enumerate(models):
+        nonlazy_key = f"{model}-lc-internal-{method}"
+        lazy_key = f"{model}-lc-internallazy-{method}"
+
+        if nonlazy_key not in data_dict or lazy_key not in data_dict:
+            continue
+
+        nonlazy_df = pd.concat(
+            [df[df["method"] == method] for df in data_dict[nonlazy_key]],
+            ignore_index=True,
+        )
+        lazy_df = pd.concat(
+            [df[df["method"] == method] for df in data_dict[lazy_key]],
+            ignore_index=True,
+        )
+        steps = sorted(nonlazy_df["step"].unique())
+
+        for metric_idx, (metric, ax) in enumerate(zip([metric1, metric2], axes[idx])):
+            lazy_means, lazy_errs = [], []
+            nonlazy_means, nonlazy_errs = [], []
+
+            for k, step in enumerate(steps):
+                offset = k * 0.1
+                lazy_step = lazy_df[lazy_df["step"] == step][metric]
+                nonlazy_step = nonlazy_df[nonlazy_df["step"] == step][metric]
+
+                lazy_means.append(lazy_step.mean())
+                lazy_q1, lazy_q3 = np.percentile(lazy_step, [25, 75])
+                lazy_errs.append([lazy_means[-1] - lazy_q1, lazy_q3 - lazy_means[-1]])
+
+                nonlazy_means.append(nonlazy_step.mean())
+                nonlazy_q1, nonlazy_q3 = np.percentile(nonlazy_step, [25, 75])
+                nonlazy_errs.append(
+                    [nonlazy_means[-1] - nonlazy_q1, nonlazy_q3 - nonlazy_means[-1]]
+                )
+
+                lazy_errs[-1] = [abs(e) for e in lazy_errs[-1]]
+                nonlazy_errs[-1] = [abs(e) for e in nonlazy_errs[-1]]
+
+                _, p_value = mannwhitneyu(
+                    lazy_step, nonlazy_step, alternative="two-sided"
+                )
+                P_VALUE_DICT[model].append(p_value)
+                sig_marker = "*" if p_value < 0.05 else ""
+
+                ax.errorbar(
+                    step,
+                    lazy_means[-1],
+                    yerr=[[lazy_errs[-1][0]], [lazy_errs[-1][1]]],
+                    fmt="o",
+                    capsize=6,
+                    markersize=9,
+                    linewidth=5,
+                    color=palette[0],
+                    label="Lazy" if step == steps[0] else "",
+                )
+                ax.errorbar(
+                    step + offset,
+                    nonlazy_means[-1],
+                    yerr=[[nonlazy_errs[-1][0]], [nonlazy_errs[-1][1]]],
+                    fmt="x",
+                    capsize=6,
+                    markersize=9,
+                    linewidth=5,
+                    color=palette[1],
+                    label="Non-Lazy" if step == steps[0] else "",
+                )
+
+                if sig_marker:
+                    current_limits = y_limits[metric]
+                    marker_y = current_limits[1] - (current_limits[1] - current_limits[0]) * 0.1
+                    ax.text(
+                        step,
+                        marker_y,
+                        sig_marker,
+                        ha="center",
+                        color="black",
+                        fontsize=30,
+                        weight="bold",
+                    )
+            
+            # Set the y-axis limits for this subplot based on the metric
+            ax.set_ylim(y_limits[metric])
+            
+            ax.set_title(
+                f"{EXPERIMENT_FRIENDLY_NAME[model]} - {METRIC_FRIENDLY_NAME[metric]}",
+                fontsize=30,
+                fontweight="bold",
+            )
+            ax.set_xlabel("Step", fontweight="bold", fontsize=30)
+            ax.set_ylabel(
+                f"{METRIC_FRIENDLY_NAME[metric]}", fontweight="bold", fontsize=30)
+
+            ax.tick_params(axis="both", which="major", labelsize=30)
+            for label in ax.get_xticklabels() + ax.get_yticklabels():
+                label.set_fontweight("bold")
+            ax.legend(loc="best", fontsize=16)
+    
+    plt.tight_layout()
+    plt.savefig(outpath, dpi=400)
+    plt.close()
+    p_values_df = pd.DataFrame.from_dict(P_VALUE_DICT, orient="index").transpose()
+    p_values_df.to_csv(os.path.join(outpath.replace(".png", "_p_values.csv")))
+
 # FIGURE 3 ----------------------------------------------
 def figure_3(dataframes, titles, output_path):
     # Set style and font size
-    sns.set_style("darkgrid")  # Apply darkgrid style for the entire figure
+    sns.set_style("whitegrid")  # Apply whitegrid style for the entire figure
+    # sns.set_style(None)
     plt.rcParams.update({"font.size": 22, "font.weight": "bold"})
 
     pvalue_dict = defaultdict(list)
     fig, axes = plt.subplots(2, 2, figsize=(24, 18))
-    palette = sns.color_palette("viridis", 2)
+    palette = PALETTE
+    # palette = ["#4575b4", "#fee090"]
 
     for idx, (df, title) in enumerate(zip(dataframes, titles)):
         ax = axes[idx // 2, idx % 2]
@@ -523,7 +936,7 @@ def figure_3(dataframes, titles, output_path):
     p_values_df.to_csv(os.path.join(output_path.replace(".png", "_p_values.csv")))
 
     plt.tight_layout()
-    plt.savefig(output_path)
+    plt.savefig(output_path, dpi=300)
     plt.close()
 
 def figure_4(df_all_epochs, df_zeroshot, respath, metric, plot_errorbars=True):
@@ -538,7 +951,7 @@ def figure_4(df_all_epochs, df_zeroshot, respath, metric, plot_errorbars=True):
         metric (str): Metric to plot (e.g., 'iou' or 'absabsDelConf').
         plot_errorbars (bool): Whether to plot error bars.
     """
-    sns.set_style("darkgrid")
+    sns.set_style("whitegrid")
     plt.rcParams.update({"font.size": 18, "font.weight": "bold"})
     METRIC_FRIENDLY_NAME = {"iou": "Mean IoU", "absabsDelConf": "Mean Δ Confluence"}
     DATA_GROUP_FRIENDLY_NAME = {
@@ -654,13 +1067,155 @@ def figure_4(df_all_epochs, df_zeroshot, respath, metric, plot_errorbars=True):
     )
 
     plt.tight_layout()
-    plt.show()
     plt.savefig(
-        os.path.join(respath)
+        os.path.join(respath),
+        dpi=300,
     )
     plt.close()
 
+def figure_4_scale(df_all_epochs, df_zeroshot, respath, metric, plot_errorbars=True):
+    """
+    Create a 1x2 grid of bar plots comparing metrics across two DataFrames.
+    Features synchronized y-axes with fixed ticks from -0.2 to 1.0 in steps of 0.2.
+    """
+    sns.set_style("whitegrid")
+    plt.rcParams.update({"font.size": 18, "font.weight": "bold"})
+    METRIC_FRIENDLY_NAME = {"iou": "Mean IoU", "absabsDelConf": "Mean Δ Confluence"}
+    DATA_GROUP_FRIENDLY_NAME = {
+        "-sc": "SC",
+        "-lc-internal": "LC Internal",
+        "-lc-external": "LC External",
+        "-lc-internallazy": "LC Internal Lazy",
+    }
+    MODEL_NAMES_FRIENDLY = {
+        "cp": "Cellpose",
+        "d2": "Detectron2",
+        "sam": "SAM",
+        "unet": "U-Net",
+        "base": "Baseline",
+    }
 
+    # Get consistent order of data groups
+    data_names = sorted(df_all_epochs["data(group)"].unique())
+    friendly_data_names = [DATA_GROUP_FRIENDLY_NAME[name] for name in data_names]
+
+    # Set up the figure
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 8))
+    
+    # Create consistent color mapping
+    norm = mcolors.Normalize(vmin=0, vmax=len(data_names)-1)
+    cmap = cm.viridis
+    group_colors = {
+        group: cmap(norm(i)) for i, group in enumerate(data_names)
+    }
+
+    # First subplot
+    barWidth = 0.9
+    offset = 0
+    model_names_1 = sorted(df_all_epochs["model(col)"].unique())
+
+    for i, model_name in enumerate(model_names_1):
+        model_data = df_all_epochs[df_all_epochs["model(col)"] == model_name].copy()
+        # Sort by data group to ensure consistent order
+        model_data = model_data.sort_values("data(group)")
+        
+        bars = model_data[metric]
+        yerrs = model_data[f"{metric}_std"]
+        yerrs = yerrs.values.tolist()
+        if not plot_errorbars:
+            yerrs = [None for _ in range(len(yerrs))]
+        groups = model_data["data(group)"]
+        
+        r = np.arange(len(bars))
+        for j, (bar, group) in enumerate(zip(bars, groups)):
+            ax1.bar(
+                r[j] + i * 0.5 * barWidth + offset,
+                bar,
+                color=group_colors[group],
+                width=barWidth,
+                error_kw=dict(capthick=2, elinewidth=2),
+                yerr=yerrs[j] if yerrs[j] is not None else None,
+            )
+        offset += 8
+
+    # Second subplot
+    barWidth = 0.9
+    offset = 0
+    model_names_2 = sorted([
+        name
+        for name in df_zeroshot["model(col)"].unique()
+        if name not in ["base", "unet"]
+    ])
+
+    for i, model_name in enumerate(model_names_2):
+        model_data = df_zeroshot[df_zeroshot["model(col)"] == model_name].copy()
+        # Sort by data group to ensure consistent order
+        model_data = model_data.sort_values("data(group)")
+        
+        bars = model_data[metric]
+        yerrs = model_data[f"{metric}_std"]
+        yerrs = yerrs.values.tolist()
+        if not plot_errorbars:
+            yerrs = [None for _ in range(len(yerrs))]
+        groups = model_data["data(group)"]
+        
+        r = np.arange(len(bars))
+        for j, (bar, group) in enumerate(zip(bars, groups)):
+            ax2.bar(
+                r[j] + i * 0.5 * barWidth + offset,
+                bar,
+                color=group_colors[group],
+                width=barWidth,
+                error_kw=dict(capthick=2, elinewidth=2),
+                yerr=yerrs[j] if yerrs[j] is not None else None,
+            )
+        offset += 8
+
+    # Set x-ticks and labels
+    ax1.set_xticks([1.0, 9.5, 18.5, 27.0, 35.5])
+    ax1.set_xticklabels([MODEL_NAMES_FRIENDLY[model] for model in model_names_1])
+    
+    ax2.set_xticks([1.5, 10.0, 18.5])
+    ax2.set_xticklabels([MODEL_NAMES_FRIENDLY[model] for model in model_names_2])
+
+    # Set fixed y-axis ticks from -0.2 to 1.0
+    y_ticks = np.arange(-0.2, 1.2, 0.2)  # Goes to 1.2 to include 1.0
+    ax1.set_ylim(-0.2, 1.0)
+    ax2.set_ylim(-0.2, 1.0)
+    ax1.set_yticks(y_ticks)
+    ax2.set_yticks(y_ticks)
+
+    # Labels and formatting
+    ax1.set_ylabel(METRIC_FRIENDLY_NAME[metric], fontweight="bold", fontsize=18)
+    ax2.set_ylabel(METRIC_FRIENDLY_NAME[metric], fontweight="bold", fontsize=18)
+    
+    ax1.tick_params(axis="both", which="major", labelsize=16)
+    ax2.tick_params(axis="both", which="major", labelsize=16)
+
+    # Create legend with consistent order
+    handles = [
+        plt.Rectangle((0, 0), 1, 1, color=group_colors[group]) for group in data_names
+    ]
+    
+    ax1.legend(
+        handles,
+        friendly_data_names,
+        title="Data Groups",
+        fontsize=14,
+        title_fontsize=14,
+    )
+
+    ax2.legend(
+        handles,
+        friendly_data_names,
+        title="Data Groups",
+        fontsize=14,
+        title_fontsize=14,
+    )
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(respath), dpi=300)
+    plt.close()
 
 def figure_1_main(sorted_data_dict):
 
@@ -697,6 +1252,13 @@ def figure_1_main(sorted_data_dict):
                 data_dict=sorted_data_dict,
                 metric=metric,
                 outpath=outpath,
+                share_y=to_share,
+            )
+
+            figure_1_scale(
+                data_dict=sorted_data_dict,
+                metric=metric,
+                outpath=outpath.replace(".png", "_scale.png"),
                 share_y=to_share,
             )
 
@@ -893,6 +1455,13 @@ if __name__ == "__main__":
             method="al",
             outpath=os.path.join("output", "main", "Figure_2.png"),
         )
+        figure_2_scale(
+            data_dict=sorted_data_dict,
+            metric1="iou",
+            metric2="dAbsAbsConf",
+            method="al",
+            outpath=os.path.join("output", "main", "Figure_2_scale.png"))
+
     # figure 3
     if args.figure_3:
         figure_3(
@@ -901,20 +1470,21 @@ if __name__ == "__main__":
             output_path=os.path.join("output", "main", "Figure_3.png"),
         )
     if args.figure_4:
-        figure_4(
+        figure_4_scale(
             df_all_epochs=df_figure_4_full,
             df_zeroshot=df_figure_4_zeroshot,
             respath=os.path.join("output", "main", "Figure_4.png"),
             metric="absabsDelConf",
             plot_errorbars=True,
         )
-        figure_4(
+        figure_4_scale(
             df_all_epochs=df_figure_4_full,
             df_zeroshot=df_figure_4_zeroshot,
             respath=os.path.join("output", "supplement", "Figure_S2.png"),
             metric="iou",
             plot_errorbars=True,
         )
+
 
     if args.all_figures:
         figure_1_main(sorted_data_dict)
@@ -925,19 +1495,26 @@ if __name__ == "__main__":
             method="al",
             outpath=os.path.join("output", "main", "Figure_2.png"),
         )
+        figure_2_scale(
+            data_dict=sorted_data_dict,
+            metric1="iou",
+            metric2="dAbsAbsConf",
+            method="al",
+            outpath=os.path.join("output", "main", "Figure_2_scale.png"))
+
         figure_3(
             titles=titles,
             dataframes=dataframes,
             output_path=os.path.join("output", "main", "Figure_3.png"),
         )
-        figure_4(
+        figure_4_scale(
             df_all_epochs=df_figure_4_full,
                 df_zeroshot=df_figure_4_zeroshot,
                 respath=os.path.join("output", "main", "Figure_4.png"),
                 metric="absabsDelConf",
                 plot_errorbars=True,
             )
-        figure_4(
+        figure_4_scale(
             df_all_epochs=df_figure_4_full,
             df_zeroshot=df_figure_4_zeroshot,
             respath=os.path.join("output", "supplement", "Figure_S2_iou.png"),

@@ -2,6 +2,26 @@ import pandas as pd
 import os
 import argparse
 
+INITIAL_DATSET_SIZE_DICT = {
+    "unet-lc-internal-al": 2,
+    "d2-lc-internal-al": 2,
+    "sam-lc-internal-al": 2,
+    "cp-lc-internal-al": 2,
+    "unet-lc-external-al": 10,
+    "d2-lc-external-al": 10,
+    "sam-lc-external-al": 10,
+    "cp-lc-external-al": 10,
+    "unet-sc-al": 2,
+    "d2-sc-al": 2,
+    "sam-sc-al": 2,
+    "cp-sc-al": 2,
+    "unet-lc-internallazy-al": 2,
+    "d2-lc-internallazy-al": 2,
+    "sam-lc-internallazy-al": 2,
+    "cp-lc-internallazy-al": 2,
+}
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Table 1")
     group = parser.add_mutually_exclusive_group(required=True)
@@ -27,6 +47,7 @@ def get_min_max_steps(sorted_data_dict, metric, method="al"):
     }
 
     for k, v in sorted_data_dict.items():
+        print(f"Processing {k}")
         model = k.split("-")[0]
         dataset = k.replace(f"{model}-", "")
         
@@ -37,6 +58,8 @@ def get_min_max_steps(sorted_data_dict, metric, method="al"):
         # Aggregate the list of dataframes by mean, only for numeric columns
         numeric_df = combined_df.select_dtypes(include='number')
         numeric_df['step'] = combined_df['step']  # Ensure 'step' is included for grouping
+        # replace step by the actual number of images in this step
+
         aggregated_df = numeric_df.groupby('step').mean(numeric_only=True).reset_index()
 
         # Calculate min and max for the specified metric
