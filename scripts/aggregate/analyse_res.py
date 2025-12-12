@@ -810,7 +810,7 @@ def download_data():
         df = pd.read_csv(respath_file, index_col=0)
         return df
     
-    url = "https://cloud.scadsai.uni-leipzig.de/index.php/s/CfgMAMbeJKeo34w/download/R1_RES_FILES_ONLY2.tar.gz"
+    url = "https://cloud.scadsai.uni-leipzig.de/index.php/s/weCS6MH2S5piXda/download/R1_RES_FILES_ONLY2.tar.gz"
 
     outpath = os.path.join("output", "data", "LEVEL_3")
     if not os.path.exists(outpath):
