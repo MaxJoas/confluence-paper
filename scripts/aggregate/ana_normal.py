@@ -143,7 +143,7 @@ def plot_bars(res_df, respath, plot_errorbars=True):
 
 
 def download_and_process_normal():
-    url = "https://cloud.scadsai.uni-leipzig.de/index.php/s/wyiEdWGXRKKcDHs/download/normal_and_zero_shot_results.zip"
+    url = "https://cloud.scadsai.uni-leipzig.de/index.php/s/tnypFqL3RbSwf6r/download/normal_and_0shot_res.zip"
     outpath = os.path.join("output", "data", "LEVEL_3")
     if not os.path.exists(outpath):
         os.makedirs(outpath, exist_ok=True)
